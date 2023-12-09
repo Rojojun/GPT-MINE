@@ -26,5 +26,4 @@ chain = LLMChain(
     verbose=True,
 )
 
-
 chain.predict(question="My name is Hojun")
