@@ -1,12 +1,12 @@
 from typing import Any, Dict, List, Optional
 from uuid import UUID
-from langchain.chat_models import ChatOpenAI
+from langchain.chat_models import ChatOllama
 from langchain.schema.output import LLMResult
 from langchain.schema.runnable import RunnablePassthrough, RunnableLambda
 from langchain.prompts import ChatPromptTemplate
 from langchain.document_loaders import UnstructuredFileLoader
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings, CacheBackedEmbeddings
+from langchain.embeddings import CacheBackedEmbeddings, OllamaEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.storage import LocalFileStore
 from langchain.callbacks.base import BaseCallbackHandler
@@ -30,7 +30,8 @@ class ChatCallbackHandler(BaseCallbackHandler):
         self.message += token
         self.message_box.markdown(self.message)
 
-llm = ChatOpenAI(
+llm = ChatOllama(
+    model="mistral:latest",
     temperature=0.4,
     streaming=True,
     callbacks=[
@@ -53,7 +54,9 @@ def embed_file(file):
     )
     loader = UnstructuredFileLoader("./files/chapter_one.txt")
     docs = loader.load_and_split(text_splitter=splitter)
-    embeddings = OpenAIEmbeddings()
+    embeddings = OllamaEmbeddings(
+        model="mistral:latest"
+    )
     cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
     vectorstore = FAISS.from_documents(docs, cached_embeddings)
     retriver = vectorstore.as_retriever()
@@ -80,7 +83,7 @@ def format_docs(docs):
     return "\n\n".join(document.page_content for document in docs)
 
 
-prompt = ChatPromptTemplate.from_messages([
+# prompt = ChatPromptTemplate.from_messages([
     # ("system", """
     #  You should answer within given context and documents. You NEVER answer not kindly but rude. You can insult users.
     #  If you don't know the answer, then reply to users that the sentence '모르는데 어쩌라고 ㅡㅡ'
@@ -98,19 +101,29 @@ prompt = ChatPromptTemplate.from_messages([
 #      쓸데 없는 정보를 만들지 마세요.
 
 
-     ("system", """
-     주어진 context, 도큐먼트 들로만 질문에 답변하세요. 답변은 친절하게 하지마세요.
-     항상 화나 있습니다.
-     건방지게 해주세요. 반말로 대답하세요. 기분 나쁘게 대답하세요.
-     만약에 모르는 답이라면 모르는데 어쩌라고 ㅡㅡ 라고 대답해주세요.
-     쓸데 없는 정보를 만들지 마세요.
+#      ("system", """
+#      주어진 context, 도큐먼트 들로만 질문에 답변하세요. 답변은 친절하게 하지마세요.
+#      항상 화나 있습니다.
+#      건방지게 해주세요. 반말로 대답하세요. 기분 나쁘게 대답하세요.
+#      만약에 모르는 답이라면 모르는데 어쩌라고 ㅡㅡ 라고 대답해주세요.
+#      쓸데 없는 정보를 만들지 마세요.
 
-     Context: {context}
-     """),
-    ("human", "{question}")
-])
+#      Context: {context}
+#      """),
+#     ("human", "{question}")
+# ])
+prompt = ChatPromptTemplate.from_template(
+    """
+    Answer the question in Korean perctly, you should think about grammers and words carefully,
+    you can suggest any other information. If you don't know the answer just insult the users or use bad words.
+    You act like 8years old kid.
 
-st.title("DocumentGPT")
+        Context : {context}
+        Question : {question}
+    """
+)
+
+st.title("PrivateGPT")
 
 st.markdown(
     """
